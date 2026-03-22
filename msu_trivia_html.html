@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>MSU Spartans Trivia</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#000;font-family:system-ui,sans-serif;color:#fff}
+input,select,button{font-family:inherit}
+button:active{transform:scale(0.97)}
+@keyframes shrink{from{width:100%}to{width:0%}}
+@keyframes fadeIn{from{opacity:0;transform:scale(0.9)}to{opacity:1;transform:scale(1)}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useEffect,useRef} = React;
+const MSU={spartan:"#18453B",white:"#FFFFFF",black:"#000000",kelly:"#008208",lime:"#7BBD00",excellence:"#0B9A6D",refresh:"#008934"};
+const CATEGORIES=["Basketball","Football","Hockey","University History","Famous Alumni","Random Mix"];
+const DECADES=["All-Time","1960s","1970s","1980s","1990s","2000s","2010s","2020s"];
+const Q_COUNTS=[5,10,15,20];
+
+function StarTracker({names,scores,colors,qCount}){
+  return(
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
+      {[0,1].map(pi=>(
+        <div key={pi} style={{background:"#111",borderRadius:10,padding:"10px 12px",border:`1.5px solid ${colors[pi]}`}}>
+          <div style={{fontSize:12,color:colors[pi],fontWeight:500,marginBottom:6}}>{names[pi]}</div>
+          <div style={{fontSize:20,fontWeight:500,color:MSU.white,marginBottom:6}}>{scores[pi]} <span style={{fontSize:11,color:"#666"}}>pts</span></div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:3}}>
+            {Array.from({length:qCount}).map((_,i)=>(
+              <span key={i} style={{fontSize:14,color:i<Math.floor(scores[pi]/10)?colors[pi]:"#2a2a2a"}}>★</span>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function YourTurnBanner({playerName,playerColor,onDone}){
+  const [visible,setVisible]=useState(true);
+  useEffect(()=>{
+    const t=setTimeout(()=>{setVisible(false);setTimeout(onDone,400);},2000);
+    return()=>clearTimeout(t);
+  },[]);
+  return(
+    <div style={{position:"fixed",inset:0,zIndex:800,background:"rgba(0,0,0,0.93)",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",opacity:visible?1:0,transition:"opacity 0.4s"}}>
+      <div style={{textAlign:"center",padding:"2rem",animation:"fadeIn 0.3s ease"}}>
+        <div style={{fontSize:48,marginBottom:16}}>🏀</div>
+        <div style={{fontSize:"clamp(28px,8vw,60px)",fontWeight:700,color:playerColor,lineHeight:1.2,letterSpacing:1}}>{playerName}</div>
+        <div style={{fontSize:"clamp(18px,5vw,32px)",color:MSU.white,fontWeight:500,marginTop:8,letterSpacing:2,textTransform:"uppercase"}}>Your Turn</div>
+        <div style={{marginTop:20,height:4,background:"#222",borderRadius:2,overflow:"hidden",width:200,margin:"20px auto 0"}}>
+          <div style={{height:"100%",background:playerColor,animation:"shrink 2s linear forwards"}}/>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Timer({active,onTick,resetKey}){
+  const [t,setT]=useState(15);
+  const ref=useRef();
+  useEffect(()=>{setT(15);},[resetKey]);
+  useEffect(()=>{
+    if(!active)return;
+    ref.current=setInterval(()=>{
+      setT(prev=>{
+        if(prev<=1){clearInterval(ref.current);onTick(0);return 0;}
+        return prev-1;
+      });
+    },1000);
+    return()=>clearInterval(ref.current);
+  },[active,resetKey]);
+  const pct=(t/15)*100;
+  const col=t>8?MSU.kelly:t>4?MSU.lime:"#c0392b";
+  return(
+    <div style={{margin:"8px 0"}}>
+      <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:3}}>
+        <span style={{color:"#888"}}>Time</span>
+        <span style={{fontWeight:500,color:col}}>{t}s</span>
+      </div>
+      <div style={{height:6,background:"#2a2a2a",borderRadius:3,overflow:"hidden"}}>
+        <div style={{height:"100%",width:`${pct}%`,background:col,transition:"width 1s linear, background 1s"}}/>
+      </div>
+    </div>
+  );
+}
+
+function SuckBanner({loser,winner,onDone}){
+  const [phase,setPhase]=useState("suck");
+  useEffect(()=>{
+    const t1=setTimeout(()=>setPhase("fade"),2800);
+    const t2=setTimeout(()=>setPhase("better"),3400);
+    const t3=setTimeout(()=>onDone(),7000);
+    return()=>{clearTimeout(t1);clearTimeout(t2);clearTimeout(t3);};
+  },[]);
+  const sv=phase==="suck",bv=phase==="better";
+  return(
+    <div style={{position:"fixed",inset:0,zIndex:999,background:"rgba(0,0,0,0.95)",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",padding:"2rem"}}>
+      <div style={{opacity:sv?1:0,transform:sv?"scale(1) rotate(-2deg)":"scale(0.7) rotate(-2deg)",transition:"opacity 0.5s, transform 0.5s",position:bv?"absolute":"relative",textAlign:"center",pointerEvents:"none"}}>
+        <div style={{fontSize:"clamp(28px,8vw,64px)",fontWeight:700,color:MSU.white,background:"#b71c1c",padding:"16px 32px",borderRadius:16,border:"4px solid #ff5252",lineHeight:1.2,letterSpacing:2,textTransform:"uppercase"}}>
+          {loser.toUpperCase()}<br/><span style={{fontSize:"clamp(36px,10vw,80px)",color:"#ff5252"}}>YOU SUCK!</span>
+        </div>
+        <div style={{fontSize:48,marginTop:16}}>💀😂🗑️</div>
+      </div>
+      <div style={{opacity:bv?1:0,transform:bv?"scale(1) rotate(1deg)":"scale(0.7) rotate(1deg)",transition:"opacity 0.6s, transform 0.6s",textAlign:"center",pointerEvents:"none"}}>
+        <div style={{fontSize:"clamp(22px,6vw,52px)",fontWeight:700,color:MSU.black,background:MSU.lime,padding:"16px 32px",borderRadius:16,border:`4px solid ${MSU.kelly}`,lineHeight:1.3}}>
+          {winner}<br/><span style={{fontSize:"clamp(16px,4vw,32px)",color:MSU.spartan}}>you're the better brother</span>
+        </div>
+        <div style={{fontSize:48,marginTop:16}}>🏆🟢⭐</div>
+      </div>
+    </div>
+  );
+}
+
+function LookAwayBanner({playerName,playerColor,otherName,onReady}){
+  return(
+    <div style={{position:"fixed",inset:0,zIndex:900,background:"#000",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",padding:"2rem",textAlign:"center"}}>
+      <div style={{fontSize:48,marginBottom:16}}>👀</div>
+      <div style={{fontSize:"clamp(20px,5vw,36px)",fontWeight:700,color:playerColor,marginBottom:12}}>{playerName}</div>
+      <div style={{fontSize:16,color:MSU.white,marginBottom:8,maxWidth:320,lineHeight:1.6}}>It's your turn to answer.</div>
+      <div style={{background:"#1a1500",border:`2px solid ${MSU.lime}`,borderRadius:12,padding:"12px 20px",marginBottom:28,maxWidth:340}}>
+        <span style={{fontSize:15,color:"#ffdd57",fontWeight:500}}>📵 {otherName} — look away now!</span>
+        <div style={{fontSize:13,color:"#aaa",marginTop:6}}>Both players answer the same question independently.</div>
+      </div>
+      <button onClick={onReady} style={{padding:"14px 36px",borderRadius:12,background:playerColor,color:MSU.white,fontSize:16,fontWeight:500,border:"none",cursor:"pointer"}}>
+        I'm ready — show the question
+      </button>
+    </div>
+  );
+}
+
+function App(){
+  const [screen,setScreen]=useState("setup");
+  const [p1Name,setP1Name]=useState("");
+  const [p2Name,setP2Name]=useState("");
+  const [category,setCategory]=useState("Basketball");
+  const [decade,setDecade]=useState("All-Time");
+  const [qCount,setQCount]=useState(10);
+  const [questions,setQuestions]=useState([]);
+  const [qIdx,setQIdx]=useState(0);
+  const [currentPlayer,setCurrentPlayer]=useState(0);
+  const [scores,setScores]=useState([0,0]);
+  const [selected,setSelected]=useState(null);
+  const [feedback,setFeedback]=useState(null);
+  const [loading,setLoading]=useState(false);
+  const [timerActive,setTimerActive]=useState(false);
+  const [timerKey,setTimerKey]=useState(0);
+  const [timeLeft,setTimeLeft]=useState(15);
+  const [showBanner,setShowBanner]=useState(false);
+  const [showTurnBanner,setShowTurnBanner]=useState(false);
+  const [error,setError]=useState("");
+  const [tbRound,setTbRound]=useState(1);
+  const [tbQuestions,setTbQuestions]=useState([]);
+  const [tbIdx,setTbIdx]=useState(0);
+  const [tbCurrentPlayer,setTbCurrentPlayer]=useState(0);
+  const [tbAnswers,setTbAnswers]=useState([]);
+  const [tbLoading,setTbLoading]=useState(false);
+  const [tbPhase,setTbPhase]=useState("lookaway");
+
+  const playerColors=[MSU.kelly,MSU.excellence];
+  const playerNames=[p1Name||"Player 1",p2Name||"Player 2"];
+
+  async function fetchQuestions(){
+    setLoading(true);setError("");
+    try{
+      const totalQ=qCount*2;
+      const prompt=`Generate exactly ${totalQ} multiple-choice trivia questions about Michigan State University Spartans sports and history.\nCategory focus: ${category}. ${decade!=="All-Time"?`Decade focus: ${decade}.`:""}\nReturn ONLY a JSON array, no markdown. Each item: {"question":"...","options":["A","B","C","D"],"answer":0,"fact":"brief fun fact"}\nThe answer field is the 0-based index of the correct option. Do not repeat questions.`;
+      const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,messages:[{role:"user",content:prompt}]})});
+      const data=await res.json();
+      const text=data.content.map(b=>b.text||"").join("");
+      setQuestions(JSON.parse(text.replace(/```json|```/g,"").trim()));
+      setShowTurnBanner(true);setScreen("game");
+    }catch(e){setError("Failed to load questions. Please try again.");}
+    setLoading(false);
+  }
+
+  async function fetchTiebreakerQuestions(startScreen=true){
+    setTbLoading(true);
+    try{
+      const prompt=`Generate exactly 10 challenging multiple-choice trivia questions about Michigan State University Spartans sports and history. Category: ${category}.\nReturn ONLY a JSON array, no markdown. Each item: {"question":"...","options":["A","B","C","D"],"answer":0,"fact":"brief fun fact"}`;
+      const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,messages:[{role:"user",content:prompt}]})});
+      const data=await res.json();
+      const text=data.content.map(b=>b.text||"").join("");
+      const qs=JSON.parse(text.replace(/```json|```/g,"").trim());
+      setTbQuestions(qs);setTbIdx(0);setTbCurrentPlayer(0);setTbAnswers([]);setTbPhase("lookaway");
+      if(startScreen)setScreen("tiebreaker");
+    }catch(e){setError("Failed to load tiebreaker.");}
+    setTbLoading(false);
+  }
+
+  function handleTimerTick(t){setTimeLeft(t);if(t===0)handleAnswer(null);}
+  function handleTbTimerTick(t){setTimeLeft(t);if(t===0)handleTbAnswer(null);}
+
+  function handleAnswer(idx){
+    if(feedback||(selected!==null&&idx!==null))return;
+    setTimerActive(false);setSelected(idx);
+    const q=questions[qIdx];
+    const correct=idx===q.answer;
+    const bonus=correct?Math.max(1,Math.round(timeLeft/3)):0;
+    const pts=correct?10+bonus:0;
+    setFeedback({correct,pts,fact:q.fact});
+    if(correct)setScores(s=>{const n=[...s];n[currentPlayer]+=pts;return n;});
+    setTimeout(()=>{
+      setFeedback(null);setSelected(null);
+      if(qIdx+1>=questions.length){
+        setScores(s=>{
+          if(s[0]===s[1]){fetchTiebreakerQuestions(true);}
+          else{setScreen("end");setShowBanner(true);}
+          return s;
+        });
+      }else{
+        setQIdx(i=>i+1);
+        setCurrentPlayer(c=>1-c);
+        setShowTurnBanner(true);
+      }
+    },2200);
+  }
+
+  function handleTbAnswer(idx){
+    if(feedback||(selected!==null&&idx!==null))return;
+    setTimerActive(false);setSelected(idx);
+    const q=tbQuestions[tbIdx];
+    const correct=idx===q.answer;
+    setFeedback({correct,fact:q.fact});
+    setTimeout(()=>{
+      setFeedback(null);setSelected(null);
+      if(tbCurrentPlayer===0){
+        setTbAnswers(a=>[...a,{p1:correct}]);
+        setTbCurrentPlayer(1);setTbPhase("lookaway");
+      }else{
+        setTbAnswers(prev=>{
+          const updated=[...prev];
+          const last={...updated[updated.length-1],p2:correct};
+          updated[updated.length-1]=last;
+          const p1win=last.p1&&!last.p2,p2win=!last.p1&&last.p2;
+          if(p1win||p2win){
+            const winner=p1win?0:1;
+            setTimeout(()=>{setScores(s=>{const ns=[...s];ns[winner]+=1;return ns;});setScreen("end");setShowBanner(true);},400);
+          }else{
+            const ni=tbIdx+1;
+            setTimeout(()=>{
+              if(ni>=tbQuestions.length){fetchTiebreakerQuestions(false);setScreen("tiebreaker");}
+              else{setTbIdx(ni);setTbRound(r=>r+1);setTbCurrentPlayer(0);setTbPhase("lookaway");}
+            },600);
+          }
+          return updated;
+        });
+      }
+    },2200);
+  }
+
+  const finalWinner=scores[0]>scores[1]?0:scores[1]>scores[0]?1:-1;
+
+  function resetGame(){
+    setScreen("setup");setScores([0,0]);setQIdx(0);setCurrentPlayer(0);setQuestions([]);
+    setShowBanner(false);setShowTurnBanner(false);setTbRound(1);setTbQuestions([]);
+    setTbIdx(0);setTbCurrentPlayer(0);setTbAnswers([]);setTbPhase("lookaway");
+  }
+
+  const answerButtons=(opts,q,onAns)=>(
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+      {opts.map((opt,i)=>{
+        let bg="#1a1a1a",border="1px solid #333",col="#ccc";
+        if(selected!==null||feedback){
+          if(i===q.answer){bg="#1a3a1a";border=`1.5px solid ${MSU.kelly}`;col=MSU.lime;}
+          else if(i===selected&&selected!==q.answer){bg="#3a1a1a";border="1.5px solid #c62828";col="#ff5252";}
+        }
+        return(
+          <button key={i} onClick={()=>onAns(i)} disabled={!!feedback||selected!==null}
+            style={{padding:"10px 12px",borderRadius:8,border,background:bg,color:col,fontSize:13,cursor:"pointer",textAlign:"left",lineHeight:1.4}}>
+            <span style={{fontWeight:500,marginRight:6,color:MSU.lime}}>{["A","B","C","D"][i]}.</span>{opt}
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  const wrap=(children)=>(
+    <div style={{maxWidth:560,margin:"0 auto",padding:"1rem",background:MSU.black,minHeight:"100vh"}}>{children}</div>
+  );
+
+  if(screen==="setup") return wrap(
+    <div style={{maxWidth:520,margin:"0 auto",padding:"1.5rem 1rem"}}>
+      <div style={{textAlign:"center",marginBottom:"1.5rem"}}>
+        <div style={{fontSize:36}}>🏟️</div>
+        <h1 style={{color:MSU.white,fontSize:22,fontWeight:500,margin:"8px 0 4px"}}>MSU Spartans Trivia</h1>
+        <p style={{color:MSU.lime,fontSize:14,margin:0}}>Two-player showdown — Go Green!</p>
+      </div>
+      <div style={{background:"#111",borderRadius:12,padding:"1rem 1.25rem",marginBottom:12,border:`1px solid ${MSU.spartan}`}}>
+        <div style={{fontWeight:500,fontSize:14,color:MSU.lime,marginBottom:8}}>Player Names</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+          {[p1Name,p2Name].map((v,i)=>(
+            <input key={i} placeholder={`Player ${i+1} name`} value={v}
+              onChange={e=>i===0?setP1Name(e.target.value):setP2Name(e.target.value)}
+              style={{padding:"8px 10px",borderRadius:8,border:`1.5px solid ${playerColors[i]}`,fontSize:14,background:"#1a1a1a",color:MSU.white}}/>
+          ))}
+        </div>
+      </div>
+      <div style={{background:"#111",borderRadius:12,padding:"1rem 1.25rem",marginBottom:12,border:`1px solid ${MSU.spartan}`}}>
+        <div style={{fontWeight:500,fontSize:14,color:MSU.lime,marginBottom:8}}>Category</div>
+        <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+          {CATEGORIES.map(c=>(
+            <button key={c} onClick={()=>setCategory(c)} style={{padding:"6px 12px",borderRadius:20,fontSize:13,cursor:"pointer",background:category===c?MSU.spartan:"#1a1a1a",color:category===c?MSU.lime:"#aaa",border:`1.5px solid ${category===c?MSU.kelly:"#333"}`,fontWeight:category===c?500:400}}>{c}</button>
+          ))}
+        </div>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16}}>
+        <div style={{background:"#111",borderRadius:12,padding:"1rem 1.25rem",border:`1px solid ${MSU.spartan}`}}>
+          <div style={{fontWeight:500,fontSize:14,color:MSU.lime,marginBottom:8}}>Decade</div>
+          <select value={decade} onChange={e=>setDecade(e.target.value)} style={{width:"100%",padding:"8px",borderRadius:8,border:`1px solid ${MSU.spartan}`,fontSize:14,background:"#1a1a1a",color:MSU.white}}>
+            {DECADES.map(d=><option key={d}>{d}</option>)}
+          </select>
+        </div>
+        <div style={{background:"#111",borderRadius:12,padding:"1rem 1.25rem",border:`1px solid ${MSU.spartan}`}}>
+          <div style={{fontWeight:500,fontSize:14,color:MSU.lime,marginBottom:8}}># of Questions</div>
+          <div style={{display:"flex",gap:6}}>
+            {Q_COUNTS.map(n=>(
+              <button key={n} onClick={()=>setQCount(n)} style={{flex:1,padding:"8px 4px",borderRadius:8,fontSize:13,cursor:"pointer",background:qCount===n?MSU.spartan:"#1a1a1a",color:qCount===n?MSU.lime:"#aaa",border:`1.5px solid ${qCount===n?MSU.kelly:"#333"}`,fontWeight:qCount===n?500:400}}>{n}</button>
+            ))}
+          </div>
+        </div>
+      </div>
+      {error&&<p style={{color:"#ff5252",fontSize:13,textAlign:"center",marginBottom:12}}>{error}</p>}
+      <button onClick={fetchQuestions} disabled={loading} style={{width:"100%",padding:"14px",borderRadius:12,background:loading?"#333":MSU.spartan,color:MSU.lime,fontSize:16,fontWeight:500,border:`2px solid ${MSU.kelly}`,cursor:loading?"not-allowed":"pointer"}}>
+        {loading?"Loading questions...":"⚡ Start Game"}
+      </button>
+    </div>
+  );
+
+  if(screen==="game"&&questions.length>0){
+    const q=questions[qIdx];
+    return wrap(<>
+      {showTurnBanner&&<YourTurnBanner playerName={playerNames[currentPlayer]} playerColor={playerColors[currentPlayer]} onDone={()=>{setShowTurnBanner(false);setTimerKey(k=>k+1);setTimerActive(true);setTimeLeft(15);}}/>}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+        <div style={{fontSize:12,color:"#666"}}>Q {qIdx+1}/{questions.length} ({qCount} each)</div>
+        <div style={{background:playerColors[currentPlayer],color:MSU.white,padding:"4px 14px",borderRadius:20,fontSize:13,fontWeight:500}}>{playerNames[currentPlayer]}'s turn</div>
+        <div style={{fontSize:12,color:"#666"}}>{category}</div>
+      </div>
+      <StarTracker names={playerNames} scores={scores} colors={playerColors} qCount={qCount}/>
+      <Timer active={timerActive} onTick={handleTimerTick} resetKey={timerKey}/>
+      <div style={{background:"#111",borderRadius:12,padding:"1rem 1.25rem",border:"1px solid #2a2a2a",marginBottom:12,marginTop:10}}>
+        <p style={{fontSize:15,fontWeight:500,color:MSU.white,margin:"0 0 12px",lineHeight:1.5}}>{q.question}</p>
+        {answerButtons(q.options,q,handleAnswer)}
+      </div>
+      {feedback&&<div style={{background:feedback.correct?"#1a3a1a":"#3a1a1a",borderRadius:10,padding:"10px 14px",border:`1.5px solid ${feedback.correct?MSU.kelly:"#c62828"}`}}>
+        <div style={{fontWeight:500,color:feedback.correct?MSU.lime:"#ff5252",fontSize:14}}>{feedback.correct?`✓ Correct! +${feedback.pts} pts`:"✗ Incorrect"}</div>
+        {feedback.fact&&<div style={{fontSize:12,color:"#aaa",marginTop:4}}>{feedback.fact}</div>}
+      </div>}
+    </>);
+  }
+
+  if(screen==="tiebreaker"){
+    if(tbLoading) return wrap(<div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"80vh"}}><div style={{color:MSU.lime,fontSize:16}}>Loading tiebreaker...</div></div>);
+    const q=tbQuestions[tbIdx];
+    if(!q)return null;
+    if(tbPhase==="lookaway") return(
+      <LookAwayBanner playerName={playerNames[tbCurrentPlayer]} playerColor={playerColors[tbCurrentPlayer]} otherName={playerNames[1-tbCurrentPlayer]}
+        onReady={()=>{setTbPhase("question");setTimerKey(k=>k+1);setTimerActive(true);setTimeLeft(15);}}/>
+    );
+    return wrap(<>
+      <div style={{background:"#1a1500",border:`2px solid ${MSU.lime}`,borderRadius:12,padding:"10px 16px",marginBottom:14,textAlign:"center"}}>
+        <div style={{color:MSU.lime,fontWeight:500,fontSize:15}}>⚡ Tiebreaker — Round {tbRound}</div>
+        <div style={{color:"#aaa",fontSize:12,marginTop:2}}>First to answer correctly when the other doesn't wins</div>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
+        {[0,1].map(pi=>(
+          <div key={pi} style={{background:pi===tbCurrentPlayer?"#1a2a1a":"#111",borderRadius:10,padding:"10px 12px",border:`1.5px solid ${pi===tbCurrentPlayer?playerColors[pi]:"#2a2a2a"}`}}>
+            <div style={{fontSize:12,color:playerColors[pi],fontWeight:500}}>{playerNames[pi]}</div>
+            <div style={{fontSize:12,color:"#666",marginTop:2}}>{pi===tbCurrentPlayer?<span style={{color:MSU.lime}}>answering now</span>:<span>waiting</span>}</div>
+          </div>
+        ))}
+      </div>
+      <Timer active={timerActive} onTick={handleTbTimerTick} resetKey={timerKey}/>
+      <div style={{background:"#111",borderRadius:12,padding:"1rem 1.25rem",border:"1px solid #2a2a2a",marginBottom:12,marginTop:10}}>
+        <p style={{fontSize:15,fontWeight:500,color:MSU.white,margin:"0 0 12px",lineHeight:1.5}}>{q.question}</p>
+        {answerButtons(q.options,q,handleTbAnswer)}
+      </div>
+      {feedback&&<div style={{background:feedback.correct?"#1a3a1a":"#3a1a1a",borderRadius:10,padding:"10px 14px",border:`1.5px solid ${feedback.correct?MSU.kelly:"#c62828"}`}}>
+        <div style={{fontWeight:500,color:feedback.correct?MSU.lime:"#ff5252",fontSize:14}}>{feedback.correct?"✓ Correct!":"✗ Incorrect"}</div>
+        {feedback.fact&&<div style={{fontSize:12,color:"#aaa",marginTop:4}}>{feedback.fact}</div>}
+      </div>}
+    </>);
+  }
+
+  if(screen==="end") return wrap(<div style={{textAlign:"center",paddingTop:"1rem"}}>
+    {showBanner&&finalWinner!==-1&&<SuckBanner loser={playerNames[1-finalWinner]} winner={playerNames[finalWinner]} onDone={()=>setShowBanner(false)}/>}
+    <div style={{fontSize:40,marginBottom:8}}>🏆</div>
+    <h2 style={{color:MSU.lime,fontWeight:500,margin:"0 0 16px"}}>{finalWinner===-1?"It's a tie!":`${playerNames[finalWinner]} wins!`}</h2>
+    <StarTracker names={playerNames} scores={scores} colors={playerColors} qCount={qCount}/>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,margin:"20px 0"}}>
+      {[0,1].map(pi=>(
+        <div key={pi} style={{background:pi===finalWinner?"#1a2a1a":"#111",borderRadius:12,padding:"1.25rem",border:`2px solid ${pi===finalWinner?playerColors[pi]:"#2a2a2a"}`}}>
+          <div style={{fontSize:13,color:playerColors[pi],fontWeight:500,marginBottom:6}}>{playerNames[pi]}</div>
+          <div style={{fontSize:36,fontWeight:500,color:MSU.white}}>{scores[pi]}</div>
+          <div style={{fontSize:12,color:"#666"}}>points</div>
+        </div>
+      ))}
+    </div>
+    <button onClick={resetGame} style={{padding:"12px 28px",borderRadius:10,background:MSU.spartan,color:MSU.lime,fontSize:15,fontWeight:500,border:`2px solid ${MSU.kelly}`,cursor:"pointer"}}>Play Again</button>
+  </div>);
+
+  return wrap(<div style={{color:"#666",textAlign:"center",paddingTop:"2rem"}}>Loading...</div>);
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
